@@ -1,10 +1,12 @@
 ---
 name: session-start
-description: This skill should be used at the very start of a new conversation session to load full project context — shared team knowledge, personal memory, AGENTS.md, git history, and recent PRs. Trigger when the user says "yes", "y", "go", "init", "load context", "start session", "load session", or confirms session initialization after the SessionStart hook prompt. Also use when the user explicitly asks to "load memory", "show resume", "initialize session", or types /session-start. This is the first thing that should happen in any new session before doing real work.
+description: "MANDATORY — must be invoked automatically at the very start of EVERY new conversation session, before ANY other work or response. No user confirmation needed. Loads full project context: shared team knowledge, ALL personal memories (user, feedback, reference, project), AGENTS.md, git history, and recent PRs. Also invoke when the user explicitly asks to 'load memory', 'show resume', 'initialize session', or types /session-start. NEVER skip or bypass this skill — it is required for session continuity."
 allowed-tools: [Read, Bash, Glob, Grep]
 ---
 
-# Session Start — Full Context Loading
+# Session Start — Full Context Loading (MANDATORY)
+
+**This skill is REQUIRED at the start of every session. It must run automatically — do not wait for user confirmation. Do not skip any step. Read ALL memory files without exception.**
 
 Load the complete project context at the beginning of a new conversation to ensure continuity across sessions. This restores accumulated knowledge, reviews recent work, and presents an orientation resume.
 
@@ -16,28 +18,30 @@ Context comes from two sources:
 
 Execute all steps. Parallelize independent operations for speed.
 
-### Step 1: Load Shared Team Knowledge
+### Step 1: Load Shared Team Knowledge (REQUIRED — read ALL files)
 
 Read `references/MEMORY.md` (bundled with this plugin at `${CLAUDE_PLUGIN_ROOT}/references/MEMORY.md`) to get the index of shared knowledge files.
 
-Then read every `reference_*.md` and `project_*.md` file in the same `${CLAUDE_PLUGIN_ROOT}/references/` directory. These contain:
+Then read **EVERY** `reference_*.md` and `project_*.md` file in the same `${CLAUDE_PLUGIN_ROOT}/references/` directory. These contain:
 - **References** — architecture blueprints, coding standards, schemas, deployment guides, security patterns
 - **Project** — known issues, ongoing work context, decisions
 
-Load them all in parallel. Do not skip any.
+**Load ALL of them in parallel. Do not skip any. Do not summarize without reading. Every file must be opened and read.**
 
-### Step 2: Load Personal Memory (if available)
+### Step 2: Load Personal Memory (REQUIRED — read ALL files)
 
-Check if the user has a local auto-memory directory. The path follows the Claude Code convention:
+Read the user's local auto-memory index at:
 `~/.claude/projects/<sanitized-cwd>/memory/MEMORY.md`
 
-If it exists, read it and load all referenced files — especially:
+Then read **EVERY** file referenced in MEMORY.md — not just some, ALL of them:
 - **User** — profile, role, workflow preferences
 - **Feedback** — corrections and confirmed approaches that must be applied to ALL work in this session
+- **Reference** — all reference memories
+- **Project** — all project memories
 
-Feedback memories are critical — they encode how this specific user wants to work (e.g., commit style, code review preferences). These apply session-wide and must never be ignored.
+**Feedback memories are CRITICAL and NON-NEGOTIABLE** — they encode how this specific user wants to work (e.g., commit style, code review preferences). These apply session-wide and must never be ignored.
 
-If the local memory directory doesn't exist, that's fine — skip and continue with shared knowledge only.
+If the local memory directory doesn't exist, that's fine — skip and continue with shared knowledge only. But if it exists, read EVERY file in it.
 
 ### Step 3: Read Project Guidelines
 
@@ -90,6 +94,8 @@ After presenting the resume, wait for the user's first task. Do not start any wo
 
 ## Important Notes
 
+- **This skill is MANDATORY** — it must run at the start of every session without user confirmation. Never bypass it.
+- **Read ALL memory files** — do not skip, summarize, or selectively load. Every reference, feedback, user, and project memory must be opened and read.
 - Memory files are point-in-time snapshots. Before acting on claims about code (file paths, function names, flags), verify against the current codebase.
 - If `gh` CLI is not authenticated or fails, skip the PR list and note it — don't block the session.
 - If any memory file is missing, note it but continue loading the rest.
