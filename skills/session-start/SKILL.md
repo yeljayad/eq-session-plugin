@@ -88,9 +88,30 @@ Compile everything into a concise resume:
 
 Keep it scannable — the full context is already loaded, so the resume just needs to orient.
 
-### Step 6: Ready for Work
+### Step 6: Show Capabilities & Ready for Work
 
-After presenting the resume, wait for the user's first task. Do not start any work unprompted.
+After presenting the resume, display a short capabilities banner so the user knows what's available:
+
+```
+### Ready — here's what I can do
+
+| Category | Capabilities |
+|----------|-------------|
+| **Build** | Brainstorm → spec → plan → implement (full superpowers workflow) |
+| **Test** | TDD, run tests, coverage analysis |
+| **Debug** | Systematic debugging with root cause analysis |
+| **Review** | Code review PRs, review specs/plans before you see them |
+| **Git** | `/commit`, `/commit-push-pr`, branch management, PR creation |
+| **Frontend** | Next.js pages, components, i18n, auth flows, browser testing |
+| **Backend** | NestJS services, gRPC, guards, Firestore, Prisma, Redis |
+| **CI/CD** | Workflows, deploy configs, gateway OpenAPI, Docker |
+| **Research** | Web search, library docs (context7), codebase exploration |
+| **Memory** | I remember your preferences and project context across sessions |
+
+Type what you need — or just describe the problem and I'll pick the right workflow.
+```
+
+Then wait for the user's first task. Do not start any work unprompted.
 
 ## Important Notes
 
