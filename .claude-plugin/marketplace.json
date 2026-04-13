@@ -1,0 +1,17 @@
+{
+    "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+    "name": "eq-team",
+    "version": "1.0.0",
+    "description": "EQP Platform team marketplace — shared team knowledge and session initialization",
+    "owner": {
+        "name": "EQP Platform Team"
+    },
+    "plugins": [
+        {
+            "name": "eq-session",
+            "description": "Session initialization — loads shared team knowledge, git state, PRs, and presents a resume",
+            "source": "./",
+            "category": "productivity"
+        }
+    ]
+}
