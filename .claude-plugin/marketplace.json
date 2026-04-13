@@ -1,6 +1,6 @@
 {
     "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-    "name": "eq-team",
+    "name": "eq-session-plugin",
     "version": "1.0.0",
     "description": "EQP Platform team marketplace — shared team knowledge and session initialization",
     "owner": {
