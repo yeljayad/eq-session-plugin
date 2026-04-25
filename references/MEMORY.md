@@ -28,6 +28,7 @@
 - [reference_github_rulesets.md](reference_github_rulesets.md) — 6 active rulesets, API management, OIDC, release-please PAT
 - [reference_gateway_deploy.md](reference_gateway_deploy.md) — ESPv2 deploy flow, service names, API key, common pitfalls
 - [reference_portal_gateway_integration.md](reference_portal_gateway_integration.md) — Portal→gateway: HttpOnly cookie, AuthRefreshProvider, AppCheck, server actions
+- [reference_claude_code_hooks.md](reference_claude_code_hooks.md) — 22 Claude Code hooks across 8 events: security blocks, quality enforcement, audit, semantic LLM review (claude CLI in --bare mode), CLAUDE_TEAM_LEAD_BYPASS
 
 ## Project
 - [project_known_issues.md](project_known_issues.md) — Remaining: portal tests, jest-config cleanup, file-path-restrictions, staging deploy pattern
