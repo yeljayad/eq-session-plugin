@@ -11,6 +11,7 @@ allowed-tools: [Read, Bash, Glob, Grep]
 Load the complete project context at the beginning of a new conversation to ensure continuity across sessions. This restores accumulated knowledge, reviews recent work, and presents an orientation resume.
 
 Context comes from two sources:
+
 - **Shared team knowledge** — bundled with this plugin in `references/` (architecture blueprints, known issues, coding standards). Available to every teammate.
 - **Personal memory** — each user's local auto-memory directory (user profile, feedback preferences). Private per developer.
 
@@ -23,21 +24,25 @@ Execute all steps. Parallelize independent operations for speed.
 Read `references/MEMORY.md` (bundled with this plugin at `${CLAUDE_PLUGIN_ROOT}/references/MEMORY.md`) to get the index of shared knowledge files.
 
 Then read **EVERY** `reference_*.md` and `project_*.md` file in the same `${CLAUDE_PLUGIN_ROOT}/references/` directory. These contain:
+
 - **References** — architecture blueprints, coding standards, schemas, deployment guides, security patterns
 - **Project** — known issues, ongoing work context, decisions
 
 **Load ALL of them in parallel. Do not skip any. Do not summarize without reading. Every file must be opened and read.**
 
-### Step 2: Load Personal Memory (REQUIRED — read ALL files)
+### Step 2: Load Personal Memory (REQUIRED — read ALL files, NO DEDUPLICATION)
 
 Read the user's local auto-memory index at:
 `~/.claude/projects/<sanitized-cwd>/memory/MEMORY.md`
 
 Then read **EVERY** file referenced in MEMORY.md — not just some, ALL of them:
+
 - **User** — profile, role, workflow preferences
 - **Feedback** — corrections and confirmed approaches that must be applied to ALL work in this session
 - **Reference** — all reference memories
 - **Project** — all project memories
+
+**DO NOT SKIP files that have similar names to files already loaded from the plugin's `references/` directory.** Personal memory files and shared team knowledge are TWO INDEPENDENT SOURCES. They may look similar but can diverge over time — personal memories may be updated independently. You MUST read both copies. Never deduplicate, never assume "already loaded", never skip based on filename matching.
 
 **Feedback memories are CRITICAL and NON-NEGOTIABLE** — they encode how this specific user wants to work (e.g., commit style, code review preferences). These apply session-wide and must never be ignored.
 
@@ -46,6 +51,7 @@ If the local memory directory doesn't exist, that's fine — skip and continue w
 ### Step 3: Read Project Guidelines
 
 Read `AGENTS.md` from the project root (if it exists). It contains supplementary rules about:
+
 - Default workflows
 - Tool usage preferences
 - Framework-specific guidelines
@@ -116,7 +122,7 @@ Then wait for the user's first task. Do not start any work unprompted.
 ## Important Notes
 
 - **This skill is MANDATORY** — it must run at the start of every session without user confirmation. Never bypass it.
-- **Read ALL memory files** — do not skip, summarize, or selectively load. Every reference, feedback, user, and project memory must be opened and read.
+- **Read ALL memory files from BOTH sources** — do not skip, summarize, or selectively load. Every reference, feedback, user, and project memory must be opened and read. Files with the same name in the plugin `references/` directory and the personal `memory/` directory are NOT duplicates — read both. Never deduplicate across sources.
 - Memory files are point-in-time snapshots. Before acting on claims about code (file paths, function names, flags), verify against the current codebase.
 - If `gh` CLI is not authenticated or fails, skip the PR list and note it — don't block the session.
 - If any memory file is missing, note it but continue loading the rest.
@@ -125,3 +131,12 @@ Then wait for the user's first task. Do not start any work unprompted.
 ## Updating Shared Knowledge
 
 To update the shared team knowledge, edit the files in this plugin's `references/` directory and push to the repo. All teammates will get the updates on their next plugin sync.
+
+## Sibling skills — when to invoke
+
+After loading context at session start, two sibling skills handle ongoing context management. Mention them once in the resume so the user knows they exist:
+
+- **`eq-session:context-manage`** — Mid-session router. Use BEFORE starting any non-trivial task: `route <task>` returns the right (skill, references, reviewer agent) triple. Also has `audit`, `find <topic>`, `load <ref>`, `dispatch <agent>`, `budget` actions. Read-only by default.
+- **`eq-session:manage`** — Plugin lifecycle. Use to check status, sync from upstream, or open an upstream PR for local edits to the plugin.
+
+Recommended workflow for any new task: `eq-session:context-manage route <task description>` → execute the recommended skill → dispatch the recommended reviewer agent for review. This keeps the main context window lean and routes work through the right specialists.
