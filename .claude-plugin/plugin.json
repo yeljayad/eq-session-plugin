@@ -1,5 +1,19 @@
 {
   "name": "eq-session",
-  "version": "1.2.0",
-  "description": "EQP Platform session initialization — loads memory, project context, git state, and presents a resume"
+  "version": "1.3.0",
+  "description": "EQP Platform session orchestration — loads shared/personal memory, routes tasks to the right skills/agents/references, manages context budget, and presents a resume",
+  "skills": [
+    {
+      "name": "session-start",
+      "description": "MANDATORY at session start — loads shared references, personal memory, git state, recent PRs"
+    },
+    {
+      "name": "manage",
+      "description": "Plugin lifecycle — status, sync from upstream, upstream PR, reset"
+    },
+    {
+      "name": "context-manage",
+      "description": "Mid-session router — routes tasks to skills/agents/references, audits context, dispatches subagents to keep the main window lean"
+    }
+  ]
 }
