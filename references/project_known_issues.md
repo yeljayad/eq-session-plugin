@@ -1,85 +1,59 @@
 ---
 name: Known Issues and Bugs
-description: Remaining bugs, architectural gaps, and CI/CD issues (updated 2026-04-13) — check before working on related areas
+description: Remaining bugs, architectural gaps, and CI/CD issues (refreshed 2026-05-11) — check before working on related areas
 type: project
 ---
 
-## Fixed on 2026-04-13
+## Recently shipped (May 2026)
 
-- `@repo/jest-config` package deleted entirely — no consumers remained after the full Vitest migration, 6 files removed. Commit `f83c8e9` on dev
-- Dependabot alert #22 resolved (GHSA-q4gf-8mx6-v5v3 / CVE-2026-23869, Next.js DoS via Server Components, high/CVSS 7.5): jest-config was pinning `next@16.1.5` (vulnerable); eqp-portal's `^16.2.1` was also resolving to vulnerable 16.2.1 in lockfile — bumped to `^16.2.3` (patched). Alert still shows open on GitHub because Dependabot scans `main` branch, not `dev` — will auto-close at next release
-- `bun.lock` synced with `next-themes@^0.4.6` that commit `70c2d2c` added to root `package.json` but never installed. `@repo/theme` was failing `tsc --noEmit` with `Cannot find module 'next-themes'`. Commit `65b491f`
-- `packages/i18n/dist/locales/*/common.json` untracked — 4 files that were tracked historically but matched the root `.gitignore:36 dist` pattern. Would regenerate stale vs source on every install. Commit `88500bc`
-- `packages/docs/packages/jest-config.md` renamed to `vitest-config.md` (the file already documented vitest-config, only the filename was stale). Cleaned up stale references in `README.md`, `packages/docs/README.md`, `packages/docs/Tech-Stack/overview.md`. Historical migration tables in `vitest-config.md` and `architecture-meeting-summary.md` preserved
-- `packages/docs/packages/decorators.md` expanded from 1109 → 2206 lines with a comprehensive "Request Lifecycle — Every Data Mutation" section covering every guard/interceptor/pipe/filter/service/repository transformation with file:line evidence, plus a "Known Bugs and Gotchas" section with 17 entries. Commit `33b16c3`
+Major architectural work landed since the previous known-issues snapshot (2026-04-13):
 
-## Fixed on 2026-04-01
-
-- Deep code review: all critical/important issues across backend, frontend, CI/CD, packages resolved
-- FirestoreBaseRepository spread order bug (resource_id overwrite) — fixed in base class + RetailerRepository
-- UserGuard device mismatch check guarded when DeviceGuard disabled
-- Idempotency race condition (lock return value now checked)
-- Firebase provider uses GCP_PROJECT_ID env var (not hardcoded)
-- ApiExceptionFilter added to business-crud-service
-- Auth cookie now HttpOnly via API route handler + JWT structure validation
-- Firebase token auto-refresh via AuthRefreshProvider (onIdTokenChanged)
-- AppCheck token forwarded as X-Firebase-AppCheck header
-- Full i18n for transactions + dashboard (4 locales: en/fr/pt/ar)
-- OIDC Workload Identity Federation replaces GCP_SA_KEY in deploy.yml
-- Release-please configured with PAT token (enterprise PR restriction bypass)
-- Release-please tag format fixed (no component prefix, beta/rc prerelease types)
-- Health endpoints public (security: [] in OpenAPI)
-- Tag protection covers all tags, rulesets re-imported via API
-- format:check added to all branch ruleset required checks
-- Bun 1.3.10 aligned across all configs
-- Build job added to CI pipeline
-- TransactionController + TransactionService specs added (27 tests)
-- Version reset to 0.1.0 (pre-1.0)
-- feat/iam-auth-me merged and branch deleted
-- All docs updated (iam-service, eqp-portal, api-gateway, cloud-run, development-workflow)
-- Claude code review workflow fixed (removed non-existent context7 plugin)
-- .prettierignore: CHANGELOG.md + .release-please-manifest.json
-
-## Fixed on 2026-03-29
-
-- ESPv2 ENDPOINTS_SERVICE_NAME, gateway API key, portal server actions, OpenAPI camelCase params
-
-## Fixed on 2026-03-27
-
-- force-dynamic removed, proxy.ts route protection, workspace cookie SSR safety, Suspense boundary
-
-## Fixed on 2026-03-26
-
-- Jest→Vitest migration, static USER_PROFILES, GET /iam/users/:uid, portal UserProvider, rulesets
-
-## Fixed on 2026-03-25
-
-- Customer repository data corruption, Workspace/Space simplified, eslint-disable eliminated, Zod v4, gRPC foundation
+- **GKE + ASM migration complete on cips-test** (Plans 1–5, PRs #58 → #134). Cloud Run + ESPv2 fully decommissioned 2026-05-02 (PR #132). 35+ first-build defects catalogued in `packages/docs/Operations/gke-cutover-runbook.md` Appendix A.
+- **Kafka domain-event spine LIVE** (Phases 1–5, PRs #139 → #144). Managed Kafka cluster + cert-manager mTLS + `@repo/kafka` + 36 event schemas + first end-to-end producer/consumer + auth-domain cohort + business/card producers. See `reference_kafka_spine.md`.
+- **Per-org API keys MERGED** (PRs #145 → #148). Replaced the Lua EnvoyFilter + shared `gateway-api-key`. ApiKeyGuard now the first global guard on every service; iam-service holds the Prisma `ApiKey` table + argon2id + pepper. PCI scope reduction win. See `reference_per_org_api_keys.md`.
+- **Cloud SQL Postgres provisioned** (PR #119) + initial Prisma migration (PR #123) + Cloud Build private-worker-pool migrator pattern. transaction-service + payment-gateway-service consume Cloud SQL via cloud-sql-proxy sidecar.
+- **BuildKit migration** (PR #171) — Cloud Build moved from Kaniko to `docker buildx`, with a separate mutable `eqp-platform-cache` AR repo (PR #181). Worker pool bumped to `e2-highcpu-32` (PR #167).
+- **Smart-routing report page** (PR #178) + tabbed admin dashboard (commit `b2094d3`) + 13 routing-engine endpoints + cache invalidation (commit `e1098a0`). See `reference_smart_routing.md`.
+- **Public `/api/*` routing convention** (commit `07b5bf8`, 2026-05-08) — all backend APIs rewritten under `/api/<svc>/*` at the gateway; deny-no-jwt notPaths updated to match (commit `44db756`).
+- **GrpcMetadataInterceptor wired globally** across all 11 services — was dead code in 2026-04-13 notes, now fully wired (cross-service idempotency-key propagation in gRPC metadata).
 
 ## Remaining Issues
 
-### Frontend (eqp-portal)
-
-1. **No unit tests** — Zero test files in the portal. Vitest config is set up with `passWithNoTests`.
-
 ### Backend
 
-2. **CustomerRepository spread-order bug** — `apps/business-crud-service/src/customer/customer.repository.ts:92` uses `{ resource_id: doc.id, ...doc.data() }` (wrong order). If any stored customer doc has a `resource_id` field, it silently overwrites the authoritative Firestore doc id. Retailer and `FirestoreBaseRepository` use the correct `{ ...rest, resource_id: doc.id }` spread. Listed as "fixed" in earlier known_issues but the fix was only applied to base + Retailer — Customer's own `applyFilters` override was missed. Documented in `packages/docs/packages/decorators.md` §Known Bugs #1.
-
-3. **`GrpcMetadataInterceptor` is dead code** — `packages/grpc/src/grpc-metadata.interceptor.ts` defines a class that propagates `idempotency-key` from HTTP header to gRPC metadata, but is never registered as `APP_INTERCEPTOR` in any service's `AppModule`. Either wire it globally (and enable cross-service idempotency key propagation) or delete.
-
-### CI/CD
-
-4. **Portal build in CI** — CI needs Firebase `NEXT_PUBLIC_*` env vars set via GitHub environment secrets.
+1. **CustomerRepository spread-order bug — STILL PRESENT.** `apps/business-service/src/customer/customer.repository.ts:92` uses `{ resource_id: doc.id, ...doc.data() }` (wrong order). If any stored customer doc has a `resource_id` field, it silently overwrites the authoritative Firestore doc id. Retailer and `FirestoreBaseRepository` use the correct `{ ...rest, resource_id: doc.id }` spread. Listed as "fixed" in earlier known_issues but the fix was only applied to base + Retailer — Customer's own `applyFilters` override was missed. Same bug as 2026-04-13.
 
 ### Infrastructure
 
-5. **`NEXT_PUBLIC_DEFAULT_WORKSPACE_ID` missing from Dockerfile** — Not declared as Docker ARG, never baked into portal build.
+2. **Cloud SQL IAM auth deferred.** Dev runs on password auth (`cloudsql-postgres-password` in Secret Manager). Module is already prepped (`cloudsql.iam_authentication = on`). Switch to IAM auth (PCI 8.x) BEFORE staging/prod cutover — TF + deployment.yaml wiring change, no infra churn. See `reference_cloud_sql_prisma.md` §8.
 
-6. **GitHub rulesets `file-path-restrictions.json`** — Enterprise-only rules, can't be imported via API. Must be imported manually via Settings > Rules > Rulesets > Import.
+3. **Prisma migrator job not in CI.** `infra/cloudbuild-migrate.yaml` exists but is run ad-hoc by the operator. Add to the tag-build pipeline (gated on `db:migrate:deploy` having migrations to apply) before staging/prod. Until then, schema changes require an operator submit per `reference_cloud_sql_prisma.md` §5–6.
 
-7. **Deploy staging pattern overly broad** — `deploy.yml` staging grep `'^v\d+\.\d+\.\d+-.+$'` matches any prerelease, not just `rc`. Could be narrowed to `'-rc\.\d+$'`.
+4. **3 services with gRPC-only health** in the legacy gateway health-check list — notification-service, payment-gateway-service, card-service. Was relevant on the old ESPv2 gateway; verify whether the ASM `RequestAuthentication` + VirtualService chain has any gRPC-only routing today, otherwise this note is closeable.
 
-8. **3 missing health endpoints in gateway** — notification-service, payment-gateway-service, card-service not in health.yaml (they only serve gRPC).
+### CI/CD
 
-**How to apply:** Check this list before working on portal, CI/CD, or testing.
+5. **Portal Firebase secrets on new envs.** Staging/prod first-build will fail if `portal-firebase-*` secrets are not pre-provisioned in Secret Manager. They're inlined into the JS bundle at `next build`. Document placeholder values for first apply, then rotate.
+
+6. **GitHub rulesets `file-path-restrictions.json`** — Enterprise-only rules, can't be imported via API. Must be imported manually via Settings → Rules → Rulesets → Import. No change since 2026-04-13.
+
+7. **Lint-staged race in parallel subagent dispatch.** When multiple implementer subagents touch `bun.lock` concurrently, lint-staged's stash-restore can capture another agent's unstaged files with the wrong commit message. Observed in Kafka Phase 5 Cohort 2 (commit `7f4f86d`'s message didn't match its content) and Per-org API Keys PR-C (commit `dcac5ae` same pattern). Mitigation: serialise bun.lock-touching tasks, or use per-implementer git worktrees. Squash-merge collapses these mis-labeled commits anyway.
+
+### Frontend
+
+8. **No unit tests** in eqp-portal beyond smart-routing's `mock(getRoutingReportAction)` test. Vitest config is set up with `passWithNoTests`. Same as 2026-04-13.
+
+### Documentation
+
+9. **`docs/firestore-schema.json` path reference in `reference_firestore_schema.md` is stale.** The 18K-line raw schema export no longer lives at that path. Either restore the file or strip the reference.
+
+## What's closed
+
+- ~~`GrpcMetadataInterceptor` dead code~~ — now wired globally across all 11 services.
+- ~~OIDC Workload Identity Federation~~ — fully cut over.
+- ~~`@repo/jest-config`~~ — deleted.
+- ~~ESPv2 gateway / Cloud Run~~ — decommissioned 2026-05-02 (Plan 5).
+- ~~Shared `gateway-api-key`~~ — replaced by per-org API keys (PR #147).
+- ~~Portal-in-PCI-scope (held `API_GATEWAY_KEY`)~~ — portal exited PCI scope when the env was removed.
+
+**How to apply:** Check this list before working on customer-business code, Cloud SQL wiring, CI/CD, portal tests, or anything mentioning Firestore schema docs.

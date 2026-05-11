@@ -45,3 +45,33 @@ After deleting/moving pages or changing layout structure, stale `.next` cache ca
 ## Pre-commit Hook and .env Files
 
 The `.husky/pre-commit` hook blocks ALL `.env` file commits (new and modified, `diff-filter=ACM`). This is intentional. The portal's `.env` contains Firebase `NEXT_PUBLIC_*` keys which are public, but the hook treats all `.env` files as potential secrets. Do NOT weaken this check.
+
+## GKE CSI: read secrets from the MOUNTED FILE, not process.env
+
+GKE's managed Secret Store CSI add-on does NOT include the sync-controller that turns `SecretProviderClass.secretObjects` into k8s Secrets. **Code MUST read secret values from the mounted file path (`/var/secrets/<name>`), NOT from `process.env.<NAME>`.**
+
+This bit the portal when it tried to inject `CIPS_API_KEY` as an env var via `valueFrom.secretKeyRef` referencing the SPC-synced k8s Secret — the Secret never materialised because the sync-controller isn't installed (commits `eaee053`, `57d9c1c`).
+
+**Pattern in `apps/eqp-portal/lib/safe-action.ts` (`loadCipsApiKey()`):**
+```ts
+function loadCipsApiKey(): string {
+    if (process.env.CIPS_API_KEY) return process.env.CIPS_API_KEY;          // local dev
+    try {
+        return readFileSync('/var/secrets/cips-api-key', 'utf8').trim();    // GKE prod/staging
+    } catch { throw new Error('CIPS_API_KEY not configured'); }
+}
+```
+
+For backend services, the same pattern applies — `iam-service` reads `api-key-pepper` from `/var/secrets/api-key-pepper`, `firebase-admin-credentials` from the mounted file, etc.
+
+**Alternative (for env vars that can be optional at first boot):** `optional: true` on `valueFrom.secretKeyRef`. Pod admits with the env unset, SPC volume mounts, the (eventually-synced) Secret materialises, next pod restart picks up the value. The portal's earlier `API_GATEWAY_KEY` env used this pattern before per-org API keys removed the env entirely.
+
+## Portal SSR auth headers to ASM IngressGateway
+
+The portal calls back to the IngressGateway for SSR-side data fetching:
+- `API_GATEWAY_URL=http://istio-ingressgateway.eqp-system.svc.cluster.local:80/api` (cluster-internal)
+- `Host: <public-hostname>` header MUST be set — Istio Gateway's listener filters by `hosts:`, and cluster-internal calls otherwise carry the service FQDN as Host (commit `52ed0cd`)
+- `x-endpoint-api-userinfo` header carries the base64-encoded Firebase JWT for `TokenGuard` (commit `73b22ef`)
+- `x-jwt-payload` header (asm mode) is sent alongside (commit `3c5d097`) for compatibility with the ASM `RequestAuthentication` decoder
+
+All backend API paths are routed under `/api/<svc>/*` at the gateway (rewrite to `/<svc>/*` inside, commit `07b5bf8`). The portal SSR catch-all is at `/` — see `reference_gke_asm_architecture.md` §15.

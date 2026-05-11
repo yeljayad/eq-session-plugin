@@ -29,6 +29,7 @@ type: reference
 | Device CRUD | R | R | R | R | CRUD | R | R | R | - |
 | User CRUD | CRUD | CRUD | CRUD | CRUD | CRUD | R | CRUD | - | - |
 | Transaction | R | R | R | R | R | R | R | R | R |
+| API Keys (`api_keys`) | CRUD | CRUD | - | - | - | CRUD | - | - | - |
 
 ## Key patterns
 - Permissions cascade downward: owner > workspace > space > retailer > customer
@@ -37,5 +38,6 @@ type: reference
 - Card operations are primarily customer_admin/customer_user scope
 - Device operations are primarily retailer_admin scope
 - Transaction is read-only for all roles
+- **`api_keys`** added in the per-org API keys rollout (PR #145–#148). Only org admins can issue/rotate/revoke their org's keys: `SUPER_ADMIN` (Owner), `WORKSPACE_ADMIN`, `RETAILER_ADMIN`. Defined in `packages/common/src/config/user-profiles.ts`. See `reference_per_org_api_keys.md`.
 
 Source file: `docs/Users_matrix_21June - matrix.csv`

@@ -72,6 +72,27 @@ Guards inject:       @Inject(AUTH_REPOSITORY_TOKENS.USER) userRepo
 
 This breaks the circular dep: `@repo/api` (guards) ← `@repo/firebase` (UserRepository). Guards don't import firebase directly — they depend on the abstract token.
 
+## Port Pattern — `API_KEY_VALIDATOR` (polymorphic gRPC vs in-process)
+
+Introduced with per-org API keys. Same DI token, two implementations depending on which service is wiring it:
+
+```
+@repo/api defines:   API_KEY_VALIDATOR = 'API_KEY_VALIDATOR' (string token)
+@repo/api defines:   ApiKeyValidatorPort (interface)
+@repo/api defines:   ApiKeyValidatorClient (gRPC implementation)
+
+iam-service wires:   { provide: API_KEY_VALIDATOR, useClass: ApiKeyValidatorInProcess }
+                     ↑ Talks to Prisma + argon2 directly. No gRPC hop.
+
+Other 10 services:   { provide: API_KEY_VALIDATOR, useClass: ApiKeyValidatorClient }
+                     ↑ gRPC client → ApiKeyValidatorService.Validate at iam-service.
+                     Registered alongside `IAM_API_KEY_VALIDATOR` in `GrpcClientModule.forServices()`.
+
+ApiKeyGuard inject:  @Inject(API_KEY_VALIDATOR) validator: ApiKeyValidatorPort
+```
+
+This is the "port" pattern (hexagonal architecture) — same interface, different concrete classes per service. Lets `@repo/api` stay free of `@node-rs/argon2` and `@repo/database` (which only iam-service needs) while every service shares one guard implementation.
+
 ## Redis Injection
 
 ```typescript
@@ -91,7 +112,7 @@ import { type RedisService } from '@repo/redis';      // ❌ SWC strips this, DI
 import { AuthRepository } from './auth.repository';    // ✅ value import
 ```
 
-The `consistent-type-imports` ESLint rule is disabled in the codebase for this reason.
+The `consistent-type-imports` ESLint rule is turned off in the shared config for this reason.
 
 ## ScopeGuard — Direct Firestore Access
 

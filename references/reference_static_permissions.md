@@ -18,13 +18,15 @@ Helpers: `CRUD`, `R_ONLY`, `NONE` constants for readability.
 
 Type: `Record<UserRole, ProfilePermissions>` where `ProfilePermissions = Record<string, ResourcePermissions>`.
 
-## Guard Chain (all services)
+## Guard Chain (all services — 7 guards since per-org API keys)
 
-1. **TokenGuard** — decodes `x-endpoint-api-userinfo` header
-2. **DeviceGuard** — stub (returns true)
-3. **UserGuard** — loads user from Firestore, looks up `USER_PROFILES[user.user_profile_name]` (NO Firestore profile read)
-4. **PermissionGuard** — checks `userProfile[resource][permission]` (flat access, no `menu-1`/`menu-2`)
-5. **ScopeGuard** — validates Firestore scope entities exist
+1. **ApiKeyGuard** — validates `X-API-Key` (prefix `eqp_`) via gRPC to iam-service; on hit, attaches `req.apiKey` and short-circuits JWT guards
+2. **TokenGuard** — decodes `x-endpoint-api-userinfo` header (Firebase JWT path)
+3. **DeviceGuard** — stub (returns true)
+4. **UserGuard** — loads user from Firestore, looks up `USER_PROFILES[user.user_profile_name]` (NO Firestore profile read)
+5. **PermissionGuard** — checks `userProfile[resource][permission]` (JWT path) or `req.apiKey.scopes[resource][permission]` (API-key path). Flat access, no `menu-1`/`menu-2`.
+6. **RoleScopeGuard** — validates required scope query params are present for the role
+7. **ScopeGuard** — validates Firestore scope entities exist + Redis caching
 
 ### Key changes from Firestore-based permissions
 

@@ -27,21 +27,25 @@ export class FeatureModule {}
 
 ## 2. AppModule Guard Stack
 
-Six global guards registered as `APP_GUARD` via `useFactory` (NOT `useClass` — gives explicit DI control):
+Seven global guards registered as `APP_GUARD` via `useFactory` (NOT `useClass` — gives explicit DI control). ApiKeyGuard is FIRST (per-org X-API-Key auth path); the rest are the JWT path.
 
 ```
-1. TokenGuard      → inject: [Reflector, FirebaseAuthService]
-2. DeviceGuard     → inject: [Reflector]  (stub, returns true)
-3. UserGuard       → inject: [Reflector, AUTH_REPOSITORY_TOKENS.USER]
-4. PermissionGuard → inject: [Reflector]
-5. RoleScopeGuard  → inject: [Reflector]
-6. ScopeGuard      → inject: [Reflector, FIREBASE_APP_TOKEN, RedisService]
+1. ApiKeyGuard     → inject: [Reflector, API_KEY_VALIDATOR, RedisService, ApiKeyRateLimitService]
+2. TokenGuard      → inject: [Reflector, FirebaseAuthService]
+3. DeviceGuard     → inject: [Reflector]  (stub, returns true)
+4. UserGuard       → inject: [Reflector, AUTH_REPOSITORY_TOKENS.USER]
+5. PermissionGuard → inject: [Reflector]
+6. RoleScopeGuard  → inject: [Reflector]
+7. ScopeGuard      → inject: [Reflector, FIREBASE_APP_TOKEN, RedisService]
 ```
 
 Also registered:
 - `IdempotencyInterceptor` as `APP_INTERCEPTOR` → inject: `[Reflector, IdempotencyService]`
 - `ApiExceptionFilter` as `APP_FILTER` → `useClass`
 - `{ provide: AUTH_REPOSITORY_TOKENS.USER, useClass: UserRepository }` — string token DI for guard decoupling
+- `{ provide: API_KEY_VALIDATOR, useClass: ApiKeyValidatorInProcess }` (iam-service ONLY) OR `{ provide: API_KEY_VALIDATOR, useClass: ApiKeyValidatorClient }` (other 10 services — gRPC client to iam-service via `IAM_API_KEY_VALIDATOR` in `GrpcClientModule.forServices()`)
+
+**DO NOT** use `@Idempotent` on API-key issuance/rotate endpoints (`POST /api-keys`, `POST /api-keys/:id/rotate`) — the `IdempotencyInterceptor` caches the response body in Redis, which would re-serve the raw secret on replay.
 
 ## 3. Bootstrap (`main.ts`)
 

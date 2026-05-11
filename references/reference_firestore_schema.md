@@ -4,6 +4,8 @@ description: Complete Firestore collection hierarchy with all fields and types â
 type: reference
 ---
 
+> **Migration note (mid-2026):** The platform is mid-cutover from Firestore to PostgreSQL/Prisma. Firestore is still the source of truth for business CRUD (retailer, customer, workspace, space) and most transaction copies. Postgres holds the new authoritative models: `User`, `Business`, `Transaction`, `Card`, `Session`, `AuditLog`, `ApiKey` (see `packages/database/prisma/schema.prisma` and `reference_cloud_sql_prisma.md`). During the cutover, `ApiKey` rows carry both `business_id` (Postgres FK) and `firestore_owner_id` (string) so the existing Firestore-keyed `ScopeGuard` still works. New features should use Postgres unless they touch the Firestore-only domains above.
+
 Raw schema file: `docs/firestore-schema.json` (18K lines, exported from Firestore).
 
 ## Collection Hierarchy
